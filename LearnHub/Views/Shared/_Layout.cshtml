@@ -383,20 +383,9 @@
                         <a class="nav-link" href="/contact">Contact</a>
                     </li>
                 </ul>
-
                 <ul class="navbar-nav">
-                    <!-- Admin Dashboard -->
-                    <li class="nav-item dropdown" id="adminDashboard" style="display: none;">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/admin/courses"><i class="fas fa-book me-2"></i>Manage Courses</a></li>
-                            <li><a class="dropdown-item" href="/admin/categories"><i class="fas fa-tags me-2"></i>Manage Categories</a></li>
-                            <li><a class="dropdown-item" href="/admin/users"><i class="fas fa-users me-2"></i>Manage Users</a></li>
-                            <li><a class="dropdown-item" href="/admin/reports"><i class="fas fa-chart-bar me-2"></i>Reports</a></li>
-                        </ul>
-                    </li>
+              
+            
                     @if (User.IsInRole ("Admin"))
                     {
                         <li class="nav-item dropdown">
@@ -405,7 +394,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="/admin/courses"><i class="fas fa-book me-2"></i>Manage Courses</a></li>
-                                <li><a class="dropdown-item" href="/admin/categories"><i class="fas fa-tags me-2"></i>Manage Categories</a></li>
+                                <li><a class="dropdown-item" href="/Category/Index"><i class="fas fa-tags me-2"></i>Manage Categories</a></li>
                                 <li><a class="dropdown-item" href="/admin/users"><i class="fas fa-users me-2"></i>Manage Users</a></li>
                                 <li><a class="dropdown-item" href="/admin/reports"><i class="fas fa-chart-bar me-2"></i>Reports</a></li>
                             </ul>
