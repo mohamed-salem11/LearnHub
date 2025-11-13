@@ -1,0 +1,63 @@
+﻿@model LearnHub.Models.Lesson
+@{
+    ViewData["Title"] = "Lesson Details";
+}
+
+<div class="container mt-4">
+    <h2>@Model.Title</h2>
+    <hr />
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.VideoUrl))
+                    {
+                        <video width="100%" controls>
+                            <source src="@Model.VideoUrl" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">No video available for this lesson.</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-info-circle"></i> Lesson Information
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Title:</dt>
+                        <dd class="col-sm-8">@Model.Title</dd>
+
+                        <dt class="col-sm-4">Course:</dt>
+                        <dd class="col-sm-8">@Model.Course?.Title</dd>
+
+                        <dt class="col-sm-4">Instructor:</dt>
+                        <dd class="col-sm-8">@Model.Course?.ApplicationUser?.FullName</dd>
+                    </dl>
+
+                    <hr />
+
+                    <div class="d-grid gap-2">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Delete
+                        </a>
+                        <a asp-action="Index" asp-route-courseId="@Model.CourseId" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Lessons
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

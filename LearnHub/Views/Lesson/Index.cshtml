@@ -1,0 +1,78 @@
+﻿@model List<LearnHub.Models.Lesson>
+
+@{
+    var courseId = ViewBag.CourseId as int?;
+    var courseName = ViewBag.CourseName as string;
+    var ownerId = ViewBag.CourseOwnerId as string;
+    var currentUserId = ViewBag.CurrentUserId as string;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Lessons</h2>
+            @if (!string.IsNullOrEmpty(courseName))
+            {
+                <p class="text-muted">Course: <strong>@courseName</strong></p>
+            }
+        </div>
+
+        @if (ownerId == currentUserId)
+        {
+            <a asp-action="Create" asp-route-courseId="@courseId" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add New Lesson
+            </a>
+        }
+    </div>
+
+    @if (Model == null || Model.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No lessons available yet.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var lesson in Model)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="ratio ratio-16x9">
+                            @if (!string.IsNullOrEmpty(lesson.VideoUrl))
+                            {
+                                <video controls>
+                                    <source src="@lesson.VideoUrl" type="video/mp4">
+                                </video>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center justify-content-center bg-secondary text-white">
+                                    <i class="bi bi-play-circle" style="font-size: 3rem;"></i>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@lesson.Title</h5>
+                            <p class="text-muted small">
+                                <i class="bi bi-book"></i> Course: @lesson.Course?.Title
+                            </p>
+
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-start gap-2">
+                                     
+                                    @if (ownerId == currentUserId && lesson.CourseId == courseId)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@lesson.Id" class="btn btn-warning btn-sm">Edit</a>
+                                        <a asp-action="Delete" asp-route-id="@lesson.Id" class="btn btn-danger btn-sm">Delete</a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

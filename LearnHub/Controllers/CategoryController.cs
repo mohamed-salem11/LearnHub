@@ -13,19 +13,20 @@ namespace LearnHub.Controllers
     {
         private readonly ILogger<CategoryController> logger;
         private readonly ApplicationDbContext db;
-        private readonly UserManager<ApplicationUser> userManager;
-        public CategoryController(ApplicationDbContext _db, UserManager<ApplicationUser> _userManager, ILogger<CategoryController> _logger)
+        private readonly UserManager<ApplicationUser> usermanager;
+        public CategoryController(ApplicationDbContext _db, ILogger<CategoryController> _logger, UserManager<ApplicationUser> _usermanager)
             {
               db = _db;
-              userManager = _userManager;
               logger = _logger;
-            }
+               usermanager = _usermanager;
+        }
 
         public async Task<IActionResult> Index()
         {
             var categories = await db.Categories.ToListAsync(); 
             return View(categories);
         }
+
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult>Add()

@@ -8,6 +8,8 @@
         public string CoverImageUrl { get; set; }
         public int Price { get; set; }
         public double? TotalRating { get; set; } = 0;
+        public int TotalVotes { get; set; } = 0;
+        public int NumberOfLearnears { get; set; } = 0;
         public bool IsApproved { get; set; } = false;
 
         public int CategoryId { get; set; }

@@ -6,7 +6,7 @@
 
 @if (User.IsInRole("Admin"))
 {
-    <div class="mb-3">
+    <div class="mb-3 text-end">
         <a asp-action="Add" class="btn btn-outline-primary">+ Add Category</a>
     </div>
 }
@@ -26,42 +26,39 @@
             color: #0056b3;
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
+
+    .card:hover {
+        transform: scale(1.03);
+        transition: all 0.3s ease-in-out;
+        cursor: pointer;
+    }
 </style>
 
-<h2>Categories</h2>
+<h2 class="mb-4">Categories</h2>
 
 <div class="row">
     @foreach (var category in Model)
     {
         <div class="col-md-4 mb-4">
-            <div class="card">
-                <img src="@category.CoverImageUrl" class="card-img-top" alt="@category.Name" style="height: 200px; object-fit: cover;" />
-                <div class="card-body">
-                    <h5 class="card-title">@category.Name</h5>
-
-                    @if (User.IsInRole("Admin"))
-                    {
-                        <div class="mt-2">
-                            <a asp-action="Update" asp-route-id="@category.Id" class="btn btn-style-3 btn-sm me-2">Edit</a>
-                            <a asp-action="Delete" asp-route-id="@category.Id" class="btn btn-danger btn-sm">Delete</a>
-                        </div>
-                    }
-                </div>
+            <div class="card shadow-sm">
+                <a asp-controller="Course" asp-action="CoursesByCategory" asp-route-id="@category.Id" style="text-decoration:none; color:inherit;">
+                    <img src="@category.CoverImageUrl"
+                         class="card-img-top"
+                         alt="@category.Name"
+                         style="height: 200px; object-fit: cover;" />
+                    <div class="card-body text-center">
+                        <h5 class="card-title">@category.Name</h5>
+                    </div>
+                </a>
             </div>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="mt-2 text-center">
+                    <a asp-action="Update" asp-route-id="@category.Id" class="btn btn-style-3 btn-sm me-2">Edit</a>
+                    <a asp-action="Delete" asp-route-id="@category.Id" class="btn btn-danger btn-sm">Delete</a>
+                </div>
+            }
         </div>
     }
 </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-

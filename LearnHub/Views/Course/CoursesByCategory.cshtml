@@ -1,0 +1,63 @@
+﻿@model IEnumerable<Course>
+
+@{
+    ViewData["Title"] = "Courses by Category";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<div class="course-container">
+    @foreach (var course in Model)
+    {
+        <div class="course-card">
+            <a asp-controller="Lesson" asp-action="LessonsByCourse" asp-route-id="@course.Id" style="text-decoration:none; color:inherit;">
+                <img src="@course.CoverImageUrl"
+                     class="card-img-top"
+                     alt="@course.Title"
+                     style="height: 200px; object-fit: cover;" />
+                <div class="card-body text-center">
+                    <h5 class="card-title">@course.Title</h5>
+                </div>
+            </a>
+            <h3>@course.Title</h3>
+            <p>@course.Description</p>
+
+            <p><strong>Price:</strong> @course.Price</p>
+            <p><strong>Total Rating:</strong> @course.TotalRating</p>
+            <p><strong>Number of Learners:</strong> @course.NumberOfLearnears</p>
+
+            <a asp-controller="Courses" asp-action="Details" asp-route-id="@course.Id" class="btn btn-primary">
+                View Details
+            </a>
+        </div>
+    }
+</div>
+
+<style>
+    .course-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .course-card {
+        background: #fff;
+        border-radius: 15px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        padding: 15px;
+        text-align: center;
+        transition: transform .2s;
+    }
+
+        .course-card:hover {
+            transform: scale(1.03);
+        }
+
+    .course-image {
+        width: 100%;
+        height: 160px;
+        object-fit: cover;
+        border-radius: 10px;
+    }
+</style>
