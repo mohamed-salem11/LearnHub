@@ -49,27 +49,32 @@ namespace LearnHub.Controllers
 
 
         [HttpGet]
-        public IActionResult CoursesByCategory(int id)
+        public async Task<IActionResult> CoursesByCategory(int id)
         {
-            var courses = _context.Courses
-                             .Where(c => c.CategoryId == id)
-                             .ToList();
+            var courses = await _context.Courses
+         .Include(c => c.ApplicationUser)
+         .Include(c => c.Category)
+         .Where(c => c.CategoryId == id).ToListAsync();
 
-            ViewBag.CategoryName = _context.Categories
-                                      .Where(c => c.Id == id)
-                                      .Select(c => c.Name)
-                                      .FirstOrDefault();
+
 
             return View(courses);
         }
 
 
-        [HttpGet]   
-        public IActionResult Create()
+        [HttpGet]
+        public async Task<IActionResult> Create()
         {
             ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name");
+
+            var user = await _usermanager.GetUserAsync(User);
+
+            if (user == null || !user.IsInstructor)
+                return Forbid();
+
             return View();
         }
+
 
 
         [HttpPost]

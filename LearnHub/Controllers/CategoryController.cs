@@ -18,7 +18,7 @@ namespace LearnHub.Controllers
             {
               db = _db;
               logger = _logger;
-               usermanager = _usermanager;
+              usermanager = _usermanager;
         }
 
         public async Task<IActionResult> Index()

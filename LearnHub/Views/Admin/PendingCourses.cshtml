@@ -1,0 +1,35 @@
+﻿@model List<Course>
+
+<h2>Pending Courses</h2>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Instructor</th>
+            <th>Category</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var course in Model)
+        {
+            <tr>
+                <td>@course.Title</td>
+                <td>@course.Description</td>
+                <td>@course.ApplicationUser?.FullName</td>
+                <td>@course.Category?.Name</td>
+                <td>
+                    <a asp-action="ApproveCourse" asp-route-id="@course.Id" class="btn btn-success btn-sm">Approve</a>
+                    <a asp-action="RejectCourse" asp-route-id="@course.Id" class="btn btn-danger btn-sm">Reject</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

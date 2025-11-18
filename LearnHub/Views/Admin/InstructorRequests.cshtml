@@ -1,0 +1,42 @@
+﻿@model List<ApplicationUser>
+
+<h2>Instructor Requests</h2>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Specialization</th>
+            <th>Bio</th>
+            <th>Photo</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.FullName</td>
+                <td>@user.Email</td>
+                <td>@user.Specialization</td>
+                <td>@user.Bio</td>
+                <td>
+                    @if (!string.IsNullOrEmpty(user.Photo))
+                    {
+                        <img src="@user.Photo" width="80" height="80" style="object-fit: cover;" />
+                    }
+                </td>
+                <td>
+                    <a asp-action="ApproveInstructor" asp-route-userId="@user.Id" class="btn btn-success btn-sm">Approve</a>
+                    <a asp-action="RejectInstructor" asp-route-userId="@user.Id" class="btn btn-danger btn-sm">Reject</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

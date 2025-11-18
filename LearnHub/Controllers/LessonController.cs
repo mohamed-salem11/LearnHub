@@ -44,6 +44,10 @@ namespace LearnHub.Controllers
             return View(await lessons.OrderBy(l => l.Id).ToListAsync());
         }
 
+
+
+
+
         [HttpGet]
         public async Task<IActionResult> LessonsByCourse(int id)
         {
@@ -55,13 +59,26 @@ namespace LearnHub.Controllers
             if (course == null)
                 return NotFound();
 
-            ViewBag.CourseId = course.Id;
+            var userId = _usermanager.GetUserId(User);
+
+            bool isOwner = course.ApplicationUserId == userId;
+
+            bool isEnrolled = await _context.Enrollments
+                .AnyAsync(e => e.CourseId == id && e.ApplicationUserId == userId);
+
+            ViewBag.IsOwner = isOwner;
+            ViewBag.IsEnrolled = isEnrolled;
+            ViewBag.CourseId = id;
             ViewBag.CourseName = course.Title;
             ViewBag.CourseOwnerId = course.ApplicationUserId;
-            ViewBag.CurrentUserId = _usermanager.GetUserId(User);
+            ViewBag.CurrentUserId = userId;
 
-            return View("Index", course.Lessons.ToList());
+            return View("Index", course.Lessons.OrderBy(l => l.Id).ToList());
         }
+
+
+
+
 
 
         // GET: Lesson/Details/5
@@ -85,6 +102,9 @@ namespace LearnHub.Controllers
         public async Task<IActionResult> Create(int? courseId)
         {
             var user = await _usermanager.GetUserAsync(User);
+
+            if (user == null || !user.IsInstructor)
+                return Forbid();
 
             var userCourses = await _context.Courses
                 .Where(c => c.ApplicationUserId == user.Id)

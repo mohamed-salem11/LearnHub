@@ -1,4 +1,6 @@
-﻿namespace LearnHub.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace LearnHub.Models
 {
     public class Course
     {
@@ -9,6 +11,10 @@
         public int Price { get; set; }
         public double? TotalRating { get; set; } = 0;
         public int TotalVotes { get; set; } = 0;
+
+        [NotMapped]
+        public double AverageRating => TotalVotes > 0 ? (double)TotalRating / TotalVotes : 0;
+
         public int NumberOfLearnears { get; set; } = 0;
         public bool IsApproved { get; set; } = false;
 

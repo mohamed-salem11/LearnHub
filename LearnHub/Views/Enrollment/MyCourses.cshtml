@@ -1,0 +1,51 @@
+﻿@model IEnumerable<LearnHub.Models.Enrollment>
+
+<div class="container mt-4">
+    <h2 class="mb-4">My Learning</h2>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="row">
+            @foreach (var enrollment in Model)
+            {
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm text-center">
+ 
+                        <a asp-controller="Lesson" asp-action="LessonsByCourse" asp-route-id="@enrollment.Course.Id">
+                            <img src="@enrollment.Course.CoverImageUrl"
+                                 alt="@enrollment.Course.Title"
+                                 class="card-img-top"
+                                 style="height:200px;object-fit:cover;" />
+                        </a>
+
+                        <div class="card-body">
+                            <h5 class="card-title">@enrollment.Course.Title</h5>
+                            <p class="card-text text-muted small">
+                                @enrollment.Course.Description.Substring(0, Math.Min(100, enrollment.Course.Description.Length))...
+                            </p>
+
+                            <p><strong>Enrolled At:</strong> @enrollment.EnrolledAt.ToShortDateString()</p>
+
+                            @if (enrollment.Rating.HasValue)
+                            {
+                                <p><strong>Your Rating:</strong> @enrollment.Rating</p>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No rating yet</p>
+                            }
+
+                            
+                            <a asp-controller="Lesson" asp-action="LessonsByCourse" asp-route-id="@enrollment.Course.Id"
+                               class="btn btn-success btn-sm">Start Learning</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">You have not enrolled in any courses yet.</p>
+    }
+</div>
