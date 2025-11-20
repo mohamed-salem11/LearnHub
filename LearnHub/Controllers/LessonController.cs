@@ -20,7 +20,7 @@ namespace LearnHub.Controllers
             _usermanager = usermanager;
         }
 
-        // GET: Lesson/Index
+     
         public async Task<IActionResult> Index(int? courseId)
         {
             var user = await _usermanager.GetUserAsync(User);
@@ -79,9 +79,6 @@ namespace LearnHub.Controllers
 
 
 
-
-
-        // GET: Lesson/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -98,7 +95,6 @@ namespace LearnHub.Controllers
             return View(lesson);
         }
 
-        // GET: Lesson/Create
         public async Task<IActionResult> Create(int? courseId)
         {
             var user = await _usermanager.GetUserAsync(User);
@@ -119,7 +115,7 @@ namespace LearnHub.Controllers
             return View();
         }
 
-        // POST: Lesson/Create
+      
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Lesson lesson, IFormFile videoFile)
@@ -174,7 +170,7 @@ namespace LearnHub.Controllers
 
         }
 
-        // GET: Lesson/Edit/5
+
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -200,7 +196,6 @@ namespace LearnHub.Controllers
             return View(lesson);
         }
 
-        // POST: Lesson/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Lesson lesson, IFormFile videoFile)
@@ -278,7 +273,7 @@ namespace LearnHub.Controllers
             return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
         }
 
-        // GET: Lesson/Delete/5
+      
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -298,7 +293,7 @@ namespace LearnHub.Controllers
             return View(lesson);
         }
 
-        // POST: Lesson/Delete/5
+  
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)

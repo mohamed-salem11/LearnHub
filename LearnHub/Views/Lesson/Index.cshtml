@@ -21,10 +21,9 @@
             .FirstOrDefault(e => e.CourseId == courseId.Value && e.ApplicationUserId == user.Id);
     }
 
-    // التحقق من الأدمن
     var isAdmin = User.IsInRole("Admin");
 
-    // المستخدمين اللي عندهم صلاحية كاملة لمشاهدة كل الدروس
+   
     var hasFullAccess = isOwner || isAdmin || isEnrolled;
 
     var showingPreview = !hasFullAccess && totalLessons > 4;
@@ -81,7 +80,7 @@
         background: #000;
     }
 
-        /* تصليح عرض الفيديو في Full Screen */
+  
         .lesson-video-container video:fullscreen {
             width: 100%;
             height: 100%;

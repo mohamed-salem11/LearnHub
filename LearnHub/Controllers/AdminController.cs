@@ -19,7 +19,7 @@ namespace LearnHub.Controllers
             _userManager = userManager;
         }
 
-        // طلبات الانضمام كمُدرّس
+     
         public async Task<IActionResult> InstructorRequests()
         {
             var requests = await _userManager.Users
@@ -54,7 +54,7 @@ namespace LearnHub.Controllers
             return RedirectToAction("InstructorRequests");
         }
 
-        // الكورسات غير المقبولة
+ 
         public async Task<IActionResult> PendingCourses()
         {
             var courses = await _context.Courses
