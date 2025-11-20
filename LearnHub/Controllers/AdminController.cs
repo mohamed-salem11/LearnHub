@@ -60,7 +60,7 @@ namespace LearnHub.Controllers
             var courses = await _context.Courses
                 .Include(c => c.ApplicationUser)
                 .Include(c => c.Category)
-                .Where(c => !c.IsApproved)
+                .Where(c => c.Status == CourseStatus.Pending)
                 .ToListAsync();
 
             return View(courses);
@@ -71,7 +71,7 @@ namespace LearnHub.Controllers
             var course = await _context.Courses.FindAsync(id);
             if (course == null) return NotFound();
 
-            course.IsApproved = true;
+            course.Status = CourseStatus.Approved;
             await _context.SaveChangesAsync();
 
             TempData["Message"] = "Course approved successfully.";
@@ -83,11 +83,21 @@ namespace LearnHub.Controllers
             var course = await _context.Courses.FindAsync(id);
             if (course == null) return NotFound();
 
-            _context.Courses.Remove(course);
+            course.Status = CourseStatus.Rejected;
+            _context.Update(course);
             await _context.SaveChangesAsync();
 
-            TempData["Message"] = "Course rejected and removed.";
+            TempData["Message"] = "Course rejected successfully.";
             return RedirectToAction("PendingCourses");
         }
+
     }
 }
+
+
+
+
+
+
+
+

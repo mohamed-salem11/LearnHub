@@ -24,9 +24,14 @@ namespace LearnHub.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var applicationDbContext = _context.Courses.Include(c => c.ApplicationUser).Include(c => c.Category);
+            var applicationDbContext = _context.Courses
+                .Include(c => c.ApplicationUser)
+                .Include(c => c.Category)
+                .Where(c => c.Status == CourseStatus.Approved);
+
             return View(await applicationDbContext.ToListAsync());
         }
+
 
         public async Task<IActionResult> Details(int? id)
         {
@@ -54,25 +59,35 @@ namespace LearnHub.Controllers
             var courses = await _context.Courses
          .Include(c => c.ApplicationUser)
          .Include(c => c.Category)
-         .Where(c => c.CategoryId == id).ToListAsync();
+         .Where(c => c.CategoryId == id&& c.Status == CourseStatus.Approved).ToListAsync();
 
 
 
             return View(courses);
         }
 
-
-        [HttpGet]
-        public async Task<IActionResult> Create()
+        public IActionResult SearchPage()
         {
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name");
-
-            var user = await _usermanager.GetUserAsync(User);
-
-            if (user == null || !user.IsInstructor)
-                return Forbid();
-
             return View();
+        }
+        public IActionResult Search(string query)
+        {
+            if (string.IsNullOrEmpty(query))
+                return RedirectToAction("Index"); 
+
+            var courses = _context.Courses
+                .Include(c => c.Category)
+                .Include(c => c.ApplicationUser)
+                .Include(c => c.Enrollments)
+                .Where(c =>
+                    c.Title.Contains(query) ||                  
+                    c.Description.Contains(query) ||                
+                    c.Category.Name.Contains(query) ||                
+                    c.ApplicationUser.FullName.Contains(query)         
+                )
+                .ToList();
+
+            return View("SearchResults", courses);
         }
 
 
@@ -120,12 +135,12 @@ namespace LearnHub.Controllers
                 course.TotalRating = 0;
                 course.TotalVotes = 0;
                 course.NumberOfLearnears = 0;
-                course.IsApproved = false;
+                course.Status = CourseStatus.Draft;
 
                 _context.Add(course);
                 await _context.SaveChangesAsync();
 
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("LessonsByCourse", "Lesson", new { id = course.Id });
             }
             catch (Exception ex)
             {
@@ -138,39 +153,94 @@ namespace LearnHub.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,CoverImageUrl,Price,TotalRating,IsApproved,CategoryId,ApplicationUserId")] Course course)
+        public async Task<IActionResult> RequestReview(int courseId)
         {
-            if (id != course.Id)
+            var user = await _usermanager.GetUserAsync(User);
+
+            var course = await _context.Courses
+                .FirstOrDefaultAsync(c => c.Id == courseId && c.ApplicationUserId == user.Id);
+
+            if (course == null)
+                return Forbid();
+
+            course.Status = CourseStatus.Pending;
+            _context.Update(course);
+            await _context.SaveChangesAsync();
+
+            TempData["Message"] = "Review request submitted successfully ";
+
+            return RedirectToAction("Profile", "Instructor", new { id = user.Id });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int? id)
+        {
+            if (id == null)
             {
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+            var course = await _context.Courses.FindAsync(id);
+            if (course == null)
             {
-                try
-                {
-                    _context.Update(course);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!CourseExists(course.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+                return NotFound();
             }
-            ViewData["ApplicationUserId"] = new SelectList(_context.ApplicationUsers, "Id", "Id", course.ApplicationUserId);
-            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Id", course.CategoryId);
+
+            ViewData["CategoryId"] = new SelectList(_context.Categories, "Id", "Name", course.CategoryId);
+
             return View(course);
         }
 
-         
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, Course updatedCourse, IFormFile CoverImageFile)
+        {
+            if (id != updatedCourse.Id)
+            {
+                return NotFound();
+            }
+
+            var course = await _context.Courses.FindAsync(id);
+            if (course == null)
+            {
+                return NotFound();
+            }
+
+            
+            course.Title = updatedCourse.Title;
+            course.Description = updatedCourse.Description;
+            course.Price = updatedCourse.Price;
+            course.CategoryId = updatedCourse.CategoryId;
+
+            
+            if (CoverImageFile != null && CoverImageFile.Length > 0)
+            {
+                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(CoverImageFile.FileName);
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await CoverImageFile.CopyToAsync(stream);
+                }
+
+                course.CoverImageUrl = "/uploads/" + uniqueFileName;
+            }
+
+            _context.Update(course);
+            await _context.SaveChangesAsync();
+
+          
+            return RedirectToAction("MyProfile", "Instructor");
+        }
+
+
+
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)

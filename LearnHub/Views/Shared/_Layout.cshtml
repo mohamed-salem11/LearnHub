@@ -380,12 +380,20 @@
                     <li class="nav-item">
                         <a class="nav-link btn btn-outline-success ms-2" href="/Enrollment/MyCourses">Learning</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/about">About</a>
+
+                    <li>
+                        <form asp-controller="Course" asp-action="SearchPage" method="get" class="d-flex">
+                            <button class="btn ms-2 text-white">Search</button>
+
+                        </form>
                     </li>
+
                     <li class="nav-item">
                         <a class="nav-link" href="/contact">Contact</a>
                     </li>
+
+                  
+
                 </ul>
                 <ul class="navbar-nav">
 
@@ -408,8 +416,8 @@
                         }
                     }
 
-            
-                    @if (User.IsInRole ("Admin"))
+
+                    @if (User.IsInRole("Admin"))
                     {
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -424,7 +432,7 @@
                         </li>
                     }
 
-                
+
                     <!-- Login Partial -->
                     <partial name="_LoginPartial" />
                 </ul>
@@ -432,10 +440,7 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
-    @*   <main style="margin-top: 76px;">
-        @RenderBody()
-    </main> *@
+
     <div class="container my-5">
         <main role="main" class="pb-3">
             @RenderBody()

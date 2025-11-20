@@ -7,36 +7,37 @@
     <div class="alert alert-success">@TempData["Message"]</div>
 }
 
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>Full Name</th>
-            <th>Email</th>
-            <th>Specialization</th>
-            <th>Bio</th>
-            <th>Photo</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
+@if (Model != null && Model.Any())
+{
+    <div class="row mt-4">
         @foreach (var user in Model)
         {
-            <tr>
-                <td>@user.FullName</td>
-                <td>@user.Email</td>
-                <td>@user.Specialization</td>
-                <td>@user.Bio</td>
-                <td>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm">
                     @if (!string.IsNullOrEmpty(user.Photo))
                     {
-                        <img src="@user.Photo" width="80" height="80" style="object-fit: cover;" />
+                        <img src="@user.Photo" class="card-img-top" alt="@user.FullName" style="height:200px;object-fit:cover;" />
                     }
-                </td>
-                <td>
-                    <a asp-action="ApproveInstructor" asp-route-userId="@user.Id" class="btn btn-success btn-sm">Approve</a>
-                    <a asp-action="RejectInstructor" asp-route-userId="@user.Id" class="btn btn-danger btn-sm">Reject</a>
-                </td>
-            </tr>
+
+                    <div class="card-body text-center">
+                        <h5 class="card-title">@user.FullName</h5>
+                        <p class="text-muted">@user.Email</p>
+                        <p><strong>Specialization:</strong> @user.Specialization</p>
+                        <p><strong>Bio:</strong> @user.Bio</p>
+                    </div>
+
+                    <div class="card-footer text-center">
+                        <a asp-action="ApproveInstructor" asp-route-userId="@user.Id" class="btn btn-success btn-sm me-2">Approve</a>
+                        <a asp-action="RejectInstructor" asp-route-userId="@user.Id" class="btn btn-danger btn-sm">Reject</a>
+                    </div>
+                </div>
+            </div>
         }
-    </tbody>
-</table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info mt-4 text-center">
+        No instructor requests at the moment
+    </div>
+}

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 
 namespace LearnHub.Data
 {
@@ -28,6 +29,11 @@ namespace LearnHub.Data
                 Name = "Admin",
                 NormalizedName = "ADMIN"
             });
+            builder.Entity<Course>()
+           .HasIndex(c => c.Title);
+
+            builder.Entity<Course>()
+                .HasIndex(c => c.Description);
 
             builder.Entity<Course>()
                 .HasOne(c => c.ApplicationUser)

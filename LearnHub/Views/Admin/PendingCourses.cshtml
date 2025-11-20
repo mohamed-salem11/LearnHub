@@ -7,29 +7,50 @@
     <div class="alert alert-success">@TempData["Message"]</div>
 }
 
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Instructor</th>
-            <th>Category</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
+@if (Model != null && Model.Any())
+{
+    <div class="row mt-4">
         @foreach (var course in Model)
         {
-            <tr>
-                <td>@course.Title</td>
-                <td>@course.Description</td>
-                <td>@course.ApplicationUser?.FullName</td>
-                <td>@course.Category?.Name</td>
-                <td>
-                    <a asp-action="ApproveCourse" asp-route-id="@course.Id" class="btn btn-success btn-sm">Approve</a>
-                    <a asp-action="RejectCourse" asp-route-id="@course.Id" class="btn btn-danger btn-sm">Reject</a>
-                </td>
-            </tr>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 shadow-sm">
+
+                    @if (!string.IsNullOrEmpty(course.CoverImageUrl))
+                    {
+                        <img src="@course.CoverImageUrl" class="card-img-top" alt="@course.Title" style="height:200px;object-fit:cover;" />
+                    }
+
+                    <div class="card-body text-center">
+                        <h5 class="card-title">@course.Title</h5>
+                        <p class="text-muted">@course.Description</p>
+                        <p><strong>Category:</strong> @course.Category?.Name</p>
+                        <p><strong>Price:</strong> @course.Price EGP</p>
+
+                        @if (course.ApplicationUser != null)
+                        {
+                            <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                                <img src="@course.ApplicationUser.Photo" alt="@course.ApplicationUser.FullName"
+                                     style="width:30px;height:30px;border-radius:50%;object-fit:cover;" />
+                                <a asp-controller="Instructor" asp-action="Profile" asp-route-id="@course.ApplicationUserId"
+                                   class="text-decoration-none">
+                                    @course.ApplicationUser.FullName
+                                </a>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="card-footer text-center">
+                        <a asp-action="ApproveCourse" asp-route-id="@course.Id" class="btn btn-success btn-sm me-2">Approve</a>
+                        <a asp-action="RejectCourse" asp-route-id="@course.Id" class="btn btn-danger btn-sm">Reject</a>
+                    </div>
+                </div>
+            </div>
         }
-    </tbody>
-</table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info mt-4 text-center">
+        No pending courses at the moment
+    </div>
+}

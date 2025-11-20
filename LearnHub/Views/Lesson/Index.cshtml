@@ -21,7 +21,13 @@
             .FirstOrDefault(e => e.CourseId == courseId.Value && e.ApplicationUserId == user.Id);
     }
 
-    var showingPreview = !isOwner && !isEnrolled && totalLessons > 4;
+    // التحقق من الأدمن
+    var isAdmin = User.IsInRole("Admin");
+
+    // المستخدمين اللي عندهم صلاحية كاملة لمشاهدة كل الدروس
+    var hasFullAccess = isOwner || isAdmin || isEnrolled;
+
+    var showingPreview = !hasFullAccess && totalLessons > 4;
 }
 
 <style>
@@ -37,8 +43,10 @@
         overflow: hidden;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         transition: all 0.3s ease;
-        height: 100%;
+        display: flex;
+        flex-direction: column;
         background: white;
+        height: 600px;
     }
 
         .lesson-card:hover {
@@ -54,9 +62,12 @@
     .lesson-video-container {
         position: relative;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        height: 100%;
-        min-height: 220px;
+        flex: 1;
         overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000;
     }
 
     .lesson-card.locked .lesson-video-container {
@@ -66,8 +77,34 @@
     .lesson-video-container video {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
+        background: #000;
     }
+
+        /* تصليح عرض الفيديو في Full Screen */
+        .lesson-video-container video:fullscreen {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .lesson-video-container video:-webkit-full-screen {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .lesson-video-container video:-moz-full-screen {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .lesson-video-container video:-ms-fullscreen {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
 
     .lesson-overlay {
         position: absolute;
@@ -126,7 +163,7 @@
         font-size: 1.1rem;
         font-weight: 600;
         color: #2d3748;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         line-height: 1.4;
     }
 
@@ -136,6 +173,12 @@
         display: flex;
         align-items: center;
         gap: 8px;
+    }
+
+    .lesson-footer {
+        padding: 1.25rem;
+        background: white;
+        border-top: 1px solid #e2e8f0;
     }
 
     .action-btn {
@@ -170,6 +213,7 @@
             background: #ffb300;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+            color: #000;
         }
 
     .btn-delete {
@@ -181,9 +225,8 @@
             background: #c82333;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+            color: white;
         }
-
-
 
     .preview-badge {
         background: rgba(255,255,255,0.2);
@@ -238,12 +281,12 @@
         }
 
     .rating-section {
-        background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+        background: linear-gradient(135deg, #a8d8ff 0%, #7db9e8 100%);
         border-radius: 20px;
         padding: 2rem;
         margin-top: 3rem;
         border: none;
-        box-shadow: 0 4px 15px rgba(253, 203, 110, 0.3);
+        box-shadow: 0 4px 15px rgba(125, 185, 232, 0.3);
     }
 
     .rating-header {
@@ -288,7 +331,7 @@
     }
 
         .add-lesson-btn:hover {
-            background-color: #0b5ed7;  
+            background-color: #0b5ed7;
             color: #fff;
         }
 
@@ -322,8 +365,8 @@
     }
 
         .rating-form-control:focus {
-            border-color: #f59e0b;
-            box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25);
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
         }
 
     .btn-rating-submit {
@@ -357,7 +400,6 @@
         .lesson-grid {
             grid-template-columns: 1fr;
             gap: 1.5rem;
- 
         }
 
         .header-section {
@@ -372,11 +414,8 @@
                 font-size: 1.5rem;
             }
 
-        .lesson-video-container {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-
+        .lesson-card {
+            height: 500px;
         }
     }
 </style>
@@ -397,7 +436,7 @@
     </div>
 
     <div class="container">
-        @if (!isOwner && !isEnrolled && totalLessons > 0)
+        @if (!hasFullAccess && totalLessons > 0)
         {
             <div class="alert-premium">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -433,7 +472,7 @@
                 @for (int i = 0; i < Model.Count; i++)
                 {
                     var lesson = Model[i];
-                    var isLocked = !isOwner && !isEnrolled && i >= 4;
+                    var isLocked = !hasFullAccess && i >= 4;
                     var lessonNumber = i + 1;
 
                     <div class="lesson-card @(isLocked ? "locked" : "")">
@@ -462,34 +501,31 @@
                             }
                         </div>
 
-                        <div class="card-body p-4">
+                        <div class="lesson-footer">
                             <h5 class="lesson-title">@lesson.Title</h5>
 
                             @if (!isLocked)
                             {
-                                <div class="d-flex gap-2 flex-wrap">
-                                    @if (isOwner && lesson.CourseId == courseId)
-                                    {
+                                @if (isOwner)
+                                {
+                                    <div class="d-flex gap-2 flex-wrap">
                                         <a asp-action="Edit" asp-route-id="@lesson.Id" class="action-btn btn-edit flex-fill">
                                             <i class="bi bi-pencil-square"></i> Edit
                                         </a>
                                         <a asp-action="Delete" asp-route-id="@lesson.Id" class="action-btn btn-delete flex-fill">
                                             <i class="bi bi-trash"></i> Delete
                                         </a>
-                                    }
-                                    else if (isEnrolled)
-                                    {
-                                        <a asp-action="Details" asp-route-id="@lesson.Id" class="btn-watch action-btn w-100">
-                                            <i class="bi bi-play-fill"></i> Start Lesson
-                                        </a>
-                                    }
-                                </div>
+                                    </div>
+                                }
+                          
+
                             }
                             else
                             {
                                 <button disabled class="action-btn w-100" style="background: #e2e8f0; color: #718096; cursor: not-allowed;">
                                     <i class="bi bi-lock-fill"></i> Locked
                                 </button>
+
                             }
                         </div>
                     </div>
@@ -580,19 +616,19 @@
     document.addEventListener('DOMContentLoaded', function() {
         const videos = document.querySelectorAll('.protected-video');
 
-   
+
         videos.forEach(video => {
             video.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
             });
         });
- 
+
         const applyProtection = () => {
-          
+
             videos.forEach(video => {
                 const videoContainer = video.parentElement;
 
-             
+
                 let blackScreen = videoContainer.querySelector('.black-screen');
                 if (!blackScreen) {
                     blackScreen = document.createElement('div');
@@ -601,28 +637,28 @@
                     videoContainer.appendChild(blackScreen);
                 }
 
-               
+
                 const hideVideo = () => {
                     video.pause();
                     blackScreen.style.display = 'block';
                 };
 
-               
+
                 const showVideo = () => {
                     blackScreen.style.display = 'none';
-                 
+
                 };
-                 
+
                 window.addEventListener('blur', hideVideo);
                 window.addEventListener('focus', showVideo);
- 
+
                 document.addEventListener('fullscreenchange', function() {
                     if (!document.fullscreenElement) {
                         showVideo();
                     }
                 });
 
-               
+
                 document.addEventListener('keyup', function(e) {
                     if (e.key === 'PrintScreen' || e.key === 'PrtSc') {
                         hideVideo();
@@ -635,19 +671,3 @@
         applyProtection();
     });
 </script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

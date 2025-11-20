@@ -35,8 +35,7 @@ namespace LearnHub.Controllers
             return View("Profile", instructor);
         }
 
-
-        //  [HttpGet("Instructor/MyProfile")]
+ 
         public async Task<IActionResult> MyProfile()
         {
             var user = await _userManager.GetUserAsync(User);

@@ -20,16 +20,15 @@
         }
 
         <div class="course-card">
-            
+
             <a asp-controller="Lesson" asp-action="LessonsByCourse" asp-route-id="@course.Id">
                 <img src="@course.CoverImageUrl"
                      alt="@course.Title"
                      class="course-image" />
             </a>
- 
+
             <h4 class="mt-3">@course.Title</h4>
 
-     
             @if (course.ApplicationUser != null)
             {
                 <div class="instructor-name mb-2 d-flex align-items-center justify-content-center gap-2">
@@ -42,10 +41,9 @@
                 </div>
             }
 
-           
+
             <p class="text-muted">@course.Description.Substring(0, Math.Min(80, course.Description.Length))...</p>
 
-    
             <div class="rating-section mb-2">
                 @if (course.TotalVotes > 0)
                 {
@@ -71,11 +69,12 @@
                 }
             </div>
 
-            
+
             <p class="text-muted mb-2">
                 <i class="bi bi-people-fill"></i> @course.NumberOfLearnears learners
             </p>
- 
+
+
             <p class="fw-bold text-primary mb-3">@course.Price EGP</p>
 
             @if (User.IsInRole("Admin"))

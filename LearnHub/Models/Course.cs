@@ -16,7 +16,7 @@ namespace LearnHub.Models
         public double AverageRating => TotalVotes > 0 ? (double)TotalRating / TotalVotes : 0;
 
         public int NumberOfLearnears { get; set; } = 0;
-        public bool IsApproved { get; set; } = false;
+        public CourseStatus Status { get; set; } = CourseStatus.Draft;
 
         public int CategoryId { get; set; }
         public virtual Category Category { get; set; }

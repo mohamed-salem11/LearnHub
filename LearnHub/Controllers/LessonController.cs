@@ -170,7 +170,8 @@ namespace LearnHub.Controllers
 
             _context.Add(lesson);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index), new { courseId = lesson.CourseId });
+            return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
+
         }
 
         // GET: Lesson/Edit/5
@@ -274,7 +275,7 @@ namespace LearnHub.Controllers
                     throw;
             }
 
-            return RedirectToAction(nameof(Index), new { courseId = lesson.CourseId });
+            return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
         }
 
         // GET: Lesson/Delete/5
@@ -320,10 +321,10 @@ namespace LearnHub.Controllers
                 var courseId = lesson.CourseId;
                 _context.Lessons.Remove(lesson);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index), new { courseId });
+                return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
             }
 
-            return RedirectToAction(nameof(Index));
+          return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
         }
 
         private bool LessonExists(int id)
@@ -332,3 +333,20 @@ namespace LearnHub.Controllers
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

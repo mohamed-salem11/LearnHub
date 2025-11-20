@@ -1,16 +1,15 @@
 ﻿@model IEnumerable<LearnHub.Models.Enrollment>
 
 <div class="container mt-4">
-    <h2 class="mb-4">My Learning</h2>
-
     @if (Model != null && Model.Any())
     {
         <div class="row">
             @foreach (var enrollment in Model)
             {
-                <div class="col-md-4 mb-4">
+                <div class="col-lg-4 col-md-6 mb-4">
                     <div class="card h-100 shadow-sm text-center">
- 
+
+               
                         <a asp-controller="Lesson" asp-action="LessonsByCourse" asp-route-id="@enrollment.Course.Id">
                             <img src="@enrollment.Course.CoverImageUrl"
                                  alt="@enrollment.Course.Title"
@@ -19,25 +18,45 @@
                         </a>
 
                         <div class="card-body">
-                            <h5 class="card-title">@enrollment.Course.Title</h5>
-                            <p class="card-text text-muted small">
-                                @enrollment.Course.Description.Substring(0, Math.Min(100, enrollment.Course.Description.Length))...
-                            </p>
 
+                        
                             <p><strong>Enrolled At:</strong> @enrollment.EnrolledAt.ToShortDateString()</p>
 
-                            @if (enrollment.Rating.HasValue)
-                            {
-                                <p><strong>Your Rating:</strong> @enrollment.Rating</p>
-                            }
-                            else
-                            {
-                                <p class="text-muted">No rating yet</p>
-                            }
-
                             
-                            <a asp-controller="Lesson" asp-action="LessonsByCourse" asp-route-id="@enrollment.Course.Id"
-                               class="btn btn-success btn-sm">Start Learning</a>
+                            <div class="d-flex align-items-center justify-content-center mb-2">
+                                <a asp-controller="Instructor" asp-action="Profile" asp-route-id="@enrollment.Course.ApplicationUser.Id" class="d-flex align-items-center text-decoration-none">
+                                    <img src="@enrollment.Course.ApplicationUser.Photo"
+                                         alt="@enrollment.Course.ApplicationUser.FullName"
+                                         class="rounded-circle me-2"
+                                         style="width:40px; height:40px; object-fit:cover;" />
+                                    <span>@enrollment.Course.ApplicationUser.FullName</span>
+                                </a>
+                            </div>
+
+                       
+                            <p class="text-muted">
+                                @(string.IsNullOrEmpty(enrollment.Course.Description)
+                                                        ? "No description available"
+                                                        : enrollment.Course.Description.Substring(0, Math.Min(100, enrollment.Course.Description.Length)) + "...")
+                    </p>
+
+                            <div class="rating-section mb-2">
+                        @if (enrollment.Course.TotalVotes > 0)
+                                {
+                                    <span class="text-warning fw-bold">
+                                        @enrollment.Course.AverageRating.ToString("0.0") ⭐
+                                    </span>
+                                    <span class="text-muted small">(@enrollment.Course.TotalVotes reviews)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No reviews yet</span>
+                                }
+                            </div>
+
+                        
+                            <p>@enrollment.Course.NumberOfLearnears learners</p>
+
                         </div>
                     </div>
                 </div>
