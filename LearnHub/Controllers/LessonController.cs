@@ -1,347 +1,153 @@
-﻿using LearnHub.Data;
-using LearnHub.Models;
+﻿using LearnHub.Application.Services;
+using LearnHub.Domain.Entities;
+using LearnHub.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Stripe;
 
 namespace LearnHub.Controllers
 {
     [Authorize]
     public class LessonController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _usermanager;
+        private readonly LessonService _lessonService;
+        private readonly UserManager<ApplicationUser> _userManager;
+    
 
-        public LessonController(ApplicationDbContext context, UserManager<ApplicationUser> usermanager)
+        public LessonController(LessonService lessonService, UserManager<ApplicationUser> userManager )
         {
-            _context = context;
-            _usermanager = usermanager;
+            _lessonService = lessonService;
+            _userManager = userManager;
+         
         }
 
-     
         public async Task<IActionResult> Index(int? courseId)
         {
-            var user = await _usermanager.GetUserAsync(User);
+            var user = await _userManager.GetUserAsync(User);
 
-            IQueryable<Lesson> lessons = _context.Lessons
-                .Include(l => l.Course)
-                .ThenInclude(c => c.ApplicationUser);
+            var lessons = courseId.HasValue
+                ? await _lessonService.LessonsByCourseAsync(courseId.Value)
+                : await _lessonService.LessonsByUserAsync(user.Id);  
 
-            if (courseId.HasValue)
-            {
-                lessons = lessons.Where(l => l.CourseId == courseId.Value);
-                ViewBag.CourseId = courseId;
-                var course = await _context.Courses.FindAsync(courseId);
-                ViewBag.CourseName = course?.Title;
-            }
-            else
-            {
-                lessons = lessons.Where(l => l.Course.ApplicationUserId == user.Id);
-            }
-
-            return View(await lessons.OrderBy(l => l.Id).ToListAsync());
+            return View(lessons);
         }
-
-
-
 
 
         [HttpGet]
         public async Task<IActionResult> LessonsByCourse(int id)
         {
-            var course = await _context.Courses
-                .Include(c => c.Lessons)
-                .Include(c => c.ApplicationUser)
-                .FirstOrDefaultAsync(c => c.Id == id);
+            var lessons = await _lessonService.LessonsByCourseAsync(id);
 
-            if (course == null)
-                return NotFound();
-
-            var userId = _usermanager.GetUserId(User);
-
+            var course = await _lessonService.GetCourseWithLessonsAsync(id); 
+            if (course == null) return NotFound();
+            var userId = _userManager.GetUserId(User); 
             bool isOwner = course.ApplicationUserId == userId;
-
-            bool isEnrolled = await _context.Enrollments
-                .AnyAsync(e => e.CourseId == id && e.ApplicationUserId == userId);
-
+            bool isEnrolled = await _lessonService.CheckEnrollmentAsync(id, userId);
             ViewBag.IsOwner = isOwner;
-            ViewBag.IsEnrolled = isEnrolled;
+            ViewBag.IsEnrolled = isEnrolled; 
             ViewBag.CourseId = id;
             ViewBag.CourseName = course.Title;
-            ViewBag.CourseOwnerId = course.ApplicationUserId;
+            ViewBag.CourseOwnerId = course.ApplicationUserId; 
             ViewBag.CurrentUserId = userId;
-
             return View("Index", course.Lessons.OrderBy(l => l.Id).ToList());
         }
-
-
-
+        
 
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
-                return NotFound();
-
-            var lesson = await _context.Lessons
-                .Include(l => l.Course)
-                .ThenInclude(c => c.ApplicationUser)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            if (lesson == null)
-                return NotFound();
-
+            if (id == null) return NotFound();
+            var lesson = await _lessonService.GetByIdAsync(id.Value);
+            if (lesson == null) return NotFound();
             return View(lesson);
         }
 
         public async Task<IActionResult> Create(int? courseId)
         {
-            var user = await _usermanager.GetUserAsync(User);
-
-            if (user == null || !user.IsInstructor)
-                return Forbid();
-
-            var userCourses = await _context.Courses
-                .Where(c => c.ApplicationUserId == user.Id)
-                .ToListAsync();
-
-            if (courseId.HasValue)
-            {
-                ViewBag.SelectedCourseId = courseId;
-            }
-
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null || !user.IsInstructor) return Forbid();
+            var userCourses = await _lessonService.GetUserCoursesAsync(user.Id);
             ViewData["CourseId"] = new SelectList(userCourses, "Id", "Title", courseId);
             return View();
         }
 
-      
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Lesson lesson, IFormFile videoFile)
         {
-            var user = await _usermanager.GetUserAsync(User);
+            var user = await _userManager.GetUserAsync(User);
+            var result = await _lessonService.CreateLessonAsync(lesson, videoFile);
 
-            var course = await _context.Courses
-                .FirstOrDefaultAsync(c => c.Id == lesson.CourseId && c.ApplicationUserId == user.Id);
-
-            if (course == null)
+            if (!result.Success)
             {
-                ModelState.AddModelError("", "You can only add lessons to your own courses.");
-                ViewData["CourseId"] = new SelectList(_context.Courses.Where(c => c.ApplicationUserId == user.Id), "Id", "Title");
-                return View(lesson);
+                ModelState.AddModelError("videoFile", result.Error);
+                var userCourses = await _lessonService.GetUserCoursesAsync(user.Id);
+                ViewData["CourseId"] = new SelectList(userCourses, "Id", "Title", lesson.CourseId);
+               return View(lesson); 
             }
 
-            if (videoFile == null || videoFile.Length == 0)
-            {
-                ModelState.AddModelError("videoFile", "Please upload a video file.");
-                ViewData["CourseId"] = new SelectList(_context.Courses.Where(c => c.ApplicationUserId == user.Id), "Id", "Title", lesson.CourseId);
-                return View(lesson);
-            }
-
-            string[] allowedExtensions = { ".mp4", ".avi", ".mov", ".mkv", ".webm" };
-            string[] allowedMimeTypes = { "video/mp4", "video/x-msvideo", "video/quicktime", "video/x-matroska", "video/webm" };
-            var fileExtension = Path.GetExtension(videoFile.FileName).ToLowerInvariant();
-
-            if (!allowedExtensions.Contains(fileExtension) || !allowedMimeTypes.Contains(videoFile.ContentType.ToLower()))
-            {
-                ModelState.AddModelError("videoFile", "Only video files (MP4, AVI, MOV, MKV, WEBM) are allowed.");
-                ViewData["CourseId"] = new SelectList(_context.Courses.Where(c => c.ApplicationUserId == user.Id), "Id", "Title", lesson.CourseId);
-                return View(lesson);
-            }
-
-            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "videos");
-            if (!Directory.Exists(uploadPath))
-                Directory.CreateDirectory(uploadPath);
-
-            var fileName = $"{Guid.NewGuid()}{fileExtension}";
-            var filePath = Path.Combine(uploadPath, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            
+            using (var stream = new FileStream(result.FilePath, FileMode.Create))
             {
                 await videoFile.CopyToAsync(stream);
             }
 
-            lesson.VideoUrl = $"/uploads/videos/{fileName}";
-
-            _context.Add(lesson);
-            await _context.SaveChangesAsync();
-            return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
-
+            return RedirectToAction("LessonsByCourse", "Lesson", new { id = result.Data.CourseId });
         }
-
-
-        public async Task<IActionResult> Edit(int? id)
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
         {
-            if (id == null)
-                return NotFound();
+            var lesson = await _lessonService.GetByIdAsync(id);
+            if (lesson == null) return NotFound();
 
-            var lesson = await _context.Lessons
-                .Include(l => l.Course)
-                .FirstOrDefaultAsync(l => l.Id == id);
-
-            if (lesson == null)
-                return NotFound();
-
-            var user = await _usermanager.GetUserAsync(User);
-
+            var user = await _userManager.GetUserAsync(User);
             if (lesson.Course.ApplicationUserId != user.Id)
                 return Forbid();
 
-            var userCourses = await _context.Courses
-                .Where(c => c.ApplicationUserId == user.Id)
-                .ToListAsync();
-
+            var userCourses = await _lessonService.GetUserCoursesAsync(user.Id);
             ViewData["CourseId"] = new SelectList(userCourses, "Id", "Title", lesson.CourseId);
+
             return View(lesson);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Lesson lesson, IFormFile videoFile)
+        public async Task<IActionResult> Edit(Lesson lesson, IFormFile? videoFile)
         {
-            if (id != lesson.Id)
-                return NotFound();
+            var result = await _lessonService.UpdateLessonAsync(lesson, videoFile);
 
-            var user = await _usermanager.GetUserAsync(User);
-            var course = await _context.Courses.FindAsync(lesson.CourseId);
-
-            if (course == null || course.ApplicationUserId != user.Id)
+            if (!result.Success)
             {
-                ModelState.AddModelError("", "Invalid course selection.");
-                ViewData["CourseId"] = new SelectList(_context.Courses.Where(c => c.ApplicationUserId == user.Id), "Id", "Title");
+                ModelState.AddModelError("videoFile", result.Error ?? "Update failed");
                 return View(lesson);
             }
 
-            var existingLesson = await _context.Lessons.FindAsync(id);
-            if (existingLesson == null)
-                return NotFound();
-
-            existingLesson.Title = lesson.Title;
-            existingLesson.CourseId = lesson.CourseId;
-
-            if (videoFile != null && videoFile.Length > 0)
-            {
-                string[] allowedExtensions = { ".mp4", ".avi", ".mov", ".mkv", ".webm" };
-                string[] allowedMimeTypes = { "video/mp4", "video/x-msvideo", "video/quicktime", "video/x-matroska", "video/webm" };
-                var fileExtension = Path.GetExtension(videoFile.FileName).ToLowerInvariant();
-
-                if (!allowedExtensions.Contains(fileExtension) || !allowedMimeTypes.Contains(videoFile.ContentType.ToLower()))
-                {
-                    ModelState.AddModelError("videoFile", "Only video files are allowed.");
-                    ViewData["CourseId"] = new SelectList(_context.Courses.Where(c => c.ApplicationUserId == user.Id), "Id", "Title");
-                    return View(lesson);
-                }
-
-                if (!string.IsNullOrEmpty(existingLesson.VideoUrl))
-                {
-                    var oldVideoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", existingLesson.VideoUrl.TrimStart('/'));
-                    if (System.IO.File.Exists(oldVideoPath))
-                    {
-                        System.IO.File.Delete(oldVideoPath);
-                    }
-                }
-
-                var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "videos");
-                if (!Directory.Exists(uploadPath))
-                    Directory.CreateDirectory(uploadPath);
-
-                var fileName = $"{Guid.NewGuid()}{fileExtension}";
-                var filePath = Path.Combine(uploadPath, fileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await videoFile.CopyToAsync(stream);
-                }
-
-                existingLesson.VideoUrl = $"/uploads/videos/{fileName}";
-            }
-
-            try
-            {
-                _context.Update(existingLesson);
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!LessonExists(lesson.Id))
-                    return NotFound();
-                else
-                    throw;
-            }
-
-            return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
+            return RedirectToAction("LessonsByCourse", new { id = result.Data.CourseId });
         }
 
-      
-        public async Task<IActionResult> Delete(int? id)
+        [HttpGet]
+        public async Task<IActionResult> Delete(int id)
         {
-            if (id == null)
-                return NotFound();
-
-            var lesson = await _context.Lessons
-                .Include(l => l.Course)
-                .FirstOrDefaultAsync(m => m.Id == id);
-
-            if (lesson == null)
-                return NotFound();
-
-            var user = await _usermanager.GetUserAsync(User);
-            if (lesson.Course.ApplicationUserId != user.Id)
-                return Forbid();
-
+            var lesson = await _lessonService.GetByIdAsync(id);
+            if (lesson == null) return NotFound();
             return View(lesson);
         }
 
-  
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var lesson = await _context.Lessons
-                .Include(l => l.Course)
-                .FirstOrDefaultAsync(l => l.Id == id);
+            var lesson = await _lessonService.GetByIdAsync(id);
+            if (lesson == null) return NotFound();
 
-            if (lesson != null)
-            {
-                if (!string.IsNullOrEmpty(lesson.VideoUrl))
-                {
-                    var videoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", lesson.VideoUrl.TrimStart('/'));
-                    if (System.IO.File.Exists(videoPath))
-                    {
-                        System.IO.File.Delete(videoPath);
-                    }
-                }
+            var result = await _lessonService.DeleteAsync(id);
+            if (!result) return NotFound();
 
-                var courseId = lesson.CourseId;
-                _context.Lessons.Remove(lesson);
-                await _context.SaveChangesAsync();
-                return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
-            }
-
-          return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
+            return RedirectToAction("LessonsByCourse", "Lesson", new { id = lesson.CourseId });
         }
 
-        private bool LessonExists(int id)
-        {
-            return _context.Lessons.Any(e => e.Id == id);
-        }
+ 
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

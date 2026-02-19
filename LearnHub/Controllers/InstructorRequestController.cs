@@ -1,5 +1,8 @@
-﻿using LearnHub.Data;
-using LearnHub.Models;
+﻿
+using LearnHub.Application.Services;
+using LearnHub.Domain.Entities;
+using LearnHub.Infrastructure.Persistence;
+using LearnHub.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -9,12 +12,12 @@ namespace LearnHub.Controllers
 {
     public class InstructorRequestController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly InstructorRequestService _InstructorRequestService;
         private readonly UserManager<ApplicationUser> _usermanager;
        
-        public InstructorRequestController(ApplicationDbContext context, UserManager<ApplicationUser> usermanager)
+        public InstructorRequestController(InstructorRequestService instructorrequestservice, UserManager<ApplicationUser> usermanager)
         {
-            _context = context;
+            _InstructorRequestService = instructorrequestservice;
             _usermanager = usermanager;
         }
 
@@ -45,34 +48,18 @@ namespace LearnHub.Controllers
             user.Specialization = model.Specialization;
             user.IsInstructorRequestPending = true;
 
-            if (PhotoFile != null && PhotoFile.Length > 0)
+            var result = await _InstructorRequestService.SubmitRequestAsync(user, PhotoFile);
+
+            if (!result.Success)
             {
-                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                if (!Directory.Exists(uploadsFolder))
-                    Directory.CreateDirectory(uploadsFolder);
-
-                var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(PhotoFile.FileName);
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    await PhotoFile.CopyToAsync(fileStream);
-                }
-
-                user.Photo = "/uploads/" + uniqueFileName;
-            }
-
-            var result = await _usermanager.UpdateAsync(user);
-            if (!result.Succeeded)
-            {
-                ModelState.AddModelError("", "Something went wrong while submitting your request.");
+                ModelState.AddModelError("", result.Error ?? "Something went wrong.");
                 return View(model);
             }
-            await _context.SaveChangesAsync();
+
             TempData["Message"] = "Your instructor request has been submitted and is pending admin approval.";
             return RedirectToAction("Index", "Category");
-
         }
+
 
     }
 }

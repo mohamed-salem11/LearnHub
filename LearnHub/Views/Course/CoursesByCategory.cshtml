@@ -1,7 +1,7 @@
-﻿@model IEnumerable<LearnHub.Models.Course>
+﻿@model IEnumerable<LearnHub.Domain.Entities.Course>
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
-@inject LearnHub.Data.ApplicationDbContext DbContext
+@inject LearnHub.Infrastructure.Persistence.ApplicationDbContext DbContext
 
 @{
     var user = await UserManager.GetUserAsync(User);

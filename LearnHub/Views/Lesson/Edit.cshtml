@@ -1,4 +1,4 @@
-﻿@model LearnHub.Models.Lesson
+﻿@model LearnHub.Domain.Entities.Lesson
 @{
     ViewData["Title"] = "Edit Lesson";
 }
@@ -52,7 +52,7 @@
 
                 <div class="form-group">
                     <button type="submit" class="btn btn-primary">Save Changes</button>
-                    <a asp-action="Index" asp-route-courseId="@Model.CourseId" class="btn btn-secondary">Cancel</a>
+                    <a asp-controller="Lesson" asp-action="LessonsByCourse" asp-route-id="@Model.CourseId" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>

@@ -1,103 +1,63 @@
-﻿using LearnHub.Data;
-using LearnHub.Models;
+﻿using LearnHub.Application.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LearnHub.Controllers
 {
     [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly AdminService _adminService;
 
-        public AdminController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public AdminController(AdminService adminService)
         {
-            _context = context;
-            _userManager = userManager;
+            _adminService = adminService;
         }
 
-     
         public async Task<IActionResult> InstructorRequests()
         {
-            var requests = await _userManager.Users
-                .Where(u => u.IsInstructorRequestPending && !u.IsInstructor)
-                .ToListAsync();
-
+            var requests = await _adminService.GetInstructorRequestsAsync();
             return View(requests);
         }
 
         public async Task<IActionResult> ApproveInstructor(string userId)
         {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return NotFound();
-
-            user.IsInstructor = true;
-            user.IsInstructorRequestPending = false;
-            await _userManager.UpdateAsync(user);
-
+            await _adminService.ApproveInstructorAsync(userId);
             TempData["Message"] = "Instructor approved successfully.";
-            return RedirectToAction("InstructorRequests");
+            return RedirectToAction(nameof(InstructorRequests));
         }
 
         public async Task<IActionResult> RejectInstructor(string userId)
         {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return NotFound();
-
-            user.IsInstructorRequestPending = false;
-            await _userManager.UpdateAsync(user);
-
+            await _adminService.RejectInstructorAsync(userId);
             TempData["Message"] = "Instructor request rejected.";
-            return RedirectToAction("InstructorRequests");
+            return RedirectToAction(nameof(InstructorRequests));
         }
 
- 
         public async Task<IActionResult> PendingCourses()
         {
-            var courses = await _context.Courses
-                .Include(c => c.ApplicationUser)
-                .Include(c => c.Category)
-                .Where(c => c.Status == CourseStatus.Pending)
-                .ToListAsync();
-
+            var courses = await _adminService.GetPendingCoursesAsync();
             return View(courses);
         }
 
         public async Task<IActionResult> ApproveCourse(int id)
         {
-            var course = await _context.Courses.FindAsync(id);
+            var course = await _adminService.GetCourseByIdAsync(id);
             if (course == null) return NotFound();
 
-            course.Status = CourseStatus.Approved;
-            await _context.SaveChangesAsync();
-
+            await _adminService.ApproveCourseAsync(id);
             TempData["Message"] = "Course approved successfully.";
-            return RedirectToAction("PendingCourses");
+            return RedirectToAction(nameof(PendingCourses));
         }
 
         public async Task<IActionResult> RejectCourse(int id)
         {
-            var course = await _context.Courses.FindAsync(id);
+            var course = await _adminService.GetCourseByIdAsync(id);
             if (course == null) return NotFound();
 
-            course.Status = CourseStatus.Rejected;
-            _context.Update(course);
-            await _context.SaveChangesAsync();
-
+            await _adminService.RejectCourseAsync(id);
             TempData["Message"] = "Course rejected successfully.";
-            return RedirectToAction("PendingCourses");
+            return RedirectToAction(nameof(PendingCourses));
         }
-
     }
 }
-
-
-
-
-
-
-
-

@@ -1,89 +1,48 @@
-using LearnHub.Data;
-using LearnHub.Models;
+using LearnHub.Application.Services;
+using LearnHub.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace LearnHub.Controllers
 {
     public class CategoryController : Controller
     {
-        private readonly ILogger<CategoryController> logger;
-        private readonly ApplicationDbContext db;
-        private readonly UserManager<ApplicationUser> usermanager;
-        public CategoryController(ApplicationDbContext _db, ILogger<CategoryController> _logger, UserManager<ApplicationUser> _usermanager)
-            {
-              db = _db;
-              logger = _logger;
-              usermanager = _usermanager;
+        private readonly CategoryService _categoryService;
+
+        public CategoryController(CategoryService categoryService)
+        {
+            _categoryService = categoryService;
         }
 
         public async Task<IActionResult> Index()
         {
-            var categories = await db.Categories.ToListAsync(); 
+            var categories = await _categoryService.GetCategories();  
             return View(categories);
         }
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public async Task<IActionResult>Add()
-        {
-            return View();
-        }
+        public IActionResult Add() => View();
 
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task <IActionResult> Add(Category category, IFormFile imageFile)
+        public async Task<IActionResult> Add(Category category, IFormFile imageFile)
         {
-
-            if (imageFile == null || imageFile.Length == 0)
+            var result = await _categoryService.Add(category, imageFile);
+            if (!result.Success)
             {
-                ModelState.AddModelError("imageFile", "Please upload an image.");
+                ModelState.AddModelError("imageFile", result.Error!);
                 return View(category);
             }
-
-            string[] allowedExtensions = { ".jpg", ".jpeg", ".png" };
-            string[] allowedMimeTypes = { "image/jpeg", "image/jpg", "image/png" };
-
-            var fileExtension = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
-            if (!allowedExtensions.Contains(fileExtension) || !allowedMimeTypes.Contains(imageFile.ContentType.ToLower()))
-            {
-                ModelState.AddModelError("imageFile", "Only JPG, JPEG, PNG files are allowed.");
-                return View(category);
-            }
-
-
-            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            if (!Directory.Exists(uploadPath))
-                Directory.CreateDirectory(uploadPath);
-
-            var fileName = $"{Guid.NewGuid()}{fileExtension}";
-
-            var filePath = Path.Combine(uploadPath, fileName);
-
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await imageFile.CopyToAsync(stream);
-            }
-
-
-            category.CoverImageUrl = $"/uploads/{fileName}";
-            await db.Categories.AddAsync(category);
-            await db.SaveChangesAsync();
-
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
+
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> Update(int id)
         {
-            var category = await db.Categories.FindAsync(id);
-            if (category == null)
-                return NotFound();
+            var category = await _categoryService.Find(id);  
+            if (category == null) return NotFound();
             return View(category);
         }
 
@@ -91,57 +50,25 @@ namespace LearnHub.Controllers
         [HttpPost]
         public async Task<IActionResult> Update(Category category, IFormFile imageFile)
         {
-            var existingCategory = await db.Categories.FindAsync(category.Id);
-            if (existingCategory == null)
-                return NotFound();
+            var existingCategory = await _categoryService.Find(category.Id);
+            if (existingCategory == null) return NotFound();
 
             existingCategory.Name = category.Name;
-
+ 
             if (imageFile != null && imageFile.Length > 0)
-            {
-                string[] allowedExtensions = { ".jpg", ".jpeg", ".png" };
-                string[] allowedMimeTypes = { "image/jpeg", "image/jpg", "image/png" };
-                var fileExtension = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
-
-                if (!allowedExtensions.Contains(fileExtension) || !allowedMimeTypes.Contains(imageFile.ContentType.ToLower()))
-                {
-                    ModelState.AddModelError("imageFile", "Only JPG, JPEG, PNG files are allowed.");
-                    return View(category);
-                }
-
-                if (!string.IsNullOrEmpty(existingCategory.CoverImageUrl))
-                {
-                    var oldImagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", existingCategory.CoverImageUrl.TrimStart('/'));
-                    if (System.IO.File.Exists(oldImagePath))
-                    {
-                        System.IO.File.Delete(oldImagePath);
-                    }
-                }
-
-                var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                if (!Directory.Exists(uploadPath))
-                    Directory.CreateDirectory(uploadPath);
-
-                var fileName = $"{Guid.NewGuid()}{fileExtension}";
-                var filePath = Path.Combine(uploadPath, fileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await imageFile.CopyToAsync(stream);
-                }
-
-                existingCategory.CoverImageUrl = $"/uploads/{fileName}";
+           {  
+                existingCategory.CoverImageUrl = "/uploads/new-file-name.jpg";  
             }
 
-            db.Categories.Update(existingCategory);
-            await db.SaveChangesAsync();
-            return RedirectToAction("Index");
-          }
+            await _categoryService.Update(existingCategory);  
+            return RedirectToAction(nameof(Index));
+        }
+
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> Delete(int id)
         {
-            var category = await db.Categories.FindAsync(id);
+            var category = await _categoryService.Find(id);
             if (category == null)
                 return NotFound();
             return View(category);
@@ -151,25 +78,8 @@ namespace LearnHub.Controllers
         [HttpPost, ActionName("Delete")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var category = await db.Categories.FindAsync(id);
-            if (category == null)
-                return NotFound();
-
-            db.Categories.Remove(category);
-            await db.SaveChangesAsync();
-
-            return RedirectToAction("Index");
-        }
-
-
-
-
-
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            await _categoryService.Delete(id); 
+            return RedirectToAction(nameof(Index));
         }
     }
 }

@@ -1,5 +1,7 @@
-﻿using LearnHub.Data;
-using LearnHub.Models;
+﻿ 
+using LearnHub.Application.Services;
+using LearnHub.Domain.Entities;
+using LearnHub.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,37 +14,30 @@ namespace LearnHub.Controllers
     [Authorize]
     public class EnrollmentController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly UserManager<ApplicationUser> _usermanager;
+        private readonly EnrollmentService _enrollmentService;
 
-        public EnrollmentController(
-            ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager,
+        public EnrollmentController(EnrollmentService enrollmentService, UserManager<ApplicationUser> usermanager,
             IConfiguration configuration)
         {
-            _context = context;
-            _userManager = userManager;
+            _enrollmentService = enrollmentService;
+            _usermanager = usermanager;
             _configuration = configuration;
 
-          
             StripeConfiguration.ApiKey = _configuration["Stripe:SecretKey"];
         }
+ 
 
     
         [HttpGet]
         public async Task<IActionResult> MyCourses()
         {
-            var user = await _userManager.GetUserAsync(User);
+            var user = await _usermanager.GetUserAsync(User);
             if (user == null)
                 return Unauthorized();
 
-            var enrollments = await _context.Enrollments
-                .Include(e => e.Course)
-                    .ThenInclude(c => c.Lessons)
-                .Include(e => e.Course.ApplicationUser)
-                .Where(e => e.ApplicationUserId == user.Id)
-                .ToListAsync();
+            var enrollments = await _enrollmentService.GetBookedCourses(user.Id); 
 
             return View(enrollments);
         }
@@ -51,20 +46,17 @@ namespace LearnHub.Controllers
         [HttpPost]
         public async Task<IActionResult> BuyCourse(int courseId)
         {
-            var user = await _userManager.GetUserAsync(User);
+            var user = await _usermanager.GetUserAsync(User);
             if (user == null)
                 return Unauthorized();
 
-            var course = await _context.Courses
-                .Include(c => c.ApplicationUser)
-                .FirstOrDefaultAsync(c => c.Id == courseId);
-
+            var course = await _enrollmentService.FindCourse(courseId);
+              
             if (course == null)
                 return NotFound();
 
      
-            var existingEnrollment = await _context.Enrollments
-                .FirstOrDefaultAsync(e => e.CourseId == courseId && e.ApplicationUserId == user.Id);
+            var existingEnrollment = await _enrollmentService.CheckExistingEnrollment(courseId,user.Id);
 
             if (existingEnrollment != null)
             {
@@ -124,17 +116,16 @@ namespace LearnHub.Controllers
         [HttpGet]
         public async Task<IActionResult> PaymentSuccess(int courseId)
         {
-            var user = await _userManager.GetUserAsync(User);
+            var user = await _usermanager.GetUserAsync(User);
             if (user == null)
                 return Unauthorized();
 
-            var course = await _context.Courses.FindAsync(courseId);
+            var course = await _enrollmentService.FindCourse(courseId);
             if (course == null)
                 return NotFound();
 
             
-            var existingEnrollment = await _context.Enrollments
-                .FirstOrDefaultAsync(e => e.CourseId == courseId && e.ApplicationUserId == user.Id);
+            var existingEnrollment =   await _enrollmentService.CheckExistingEnrollment(courseId, user.Id); 
 
             if (existingEnrollment == null)
             {
@@ -146,11 +137,7 @@ namespace LearnHub.Controllers
                     EnrolledAt = DateTime.Now
                 };
 
-                _context.Enrollments.Add(enrollment);
- 
-                course.NumberOfLearnears++;
-
-                await _context.SaveChangesAsync();
+               await _enrollmentService.BuyCourse(courseId,user.Id); 
             }
 
             TempData["Message"] = "Course purchased successfully! You can now start learning.";
@@ -161,13 +148,12 @@ namespace LearnHub.Controllers
         [HttpPost]
         public async Task<IActionResult> AddRating(int courseId, int rating)
         {
-            var user = await _userManager.GetUserAsync(User);
+            var user = await _usermanager.GetUserAsync(User);
             if (user == null)
                 return Unauthorized();
 
            
-            var enrollment = await _context.Enrollments
-                .FirstOrDefaultAsync(e => e.CourseId == courseId && e.ApplicationUserId == user.Id);
+            var enrollment = await _enrollmentService.CheckExistingEnrollment(courseId, user.Id);
 
             if (enrollment == null)
             {
@@ -182,26 +168,12 @@ namespace LearnHub.Controllers
                 return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });
             }
 
-            var course = await _context.Courses.FindAsync(courseId);
+            var course = await _enrollmentService.FindCourse(courseId);
             if (course == null)
                 return NotFound();
 
           
-            if (enrollment.Rating.HasValue)
-            {
-             
-                course.TotalRating = course.TotalRating - enrollment.Rating.Value + rating;
-                enrollment.Rating = rating;
-            }
-            else
-            {
-                
-                course.TotalRating += rating;
-                course.TotalVotes++;
-                enrollment.Rating = rating;
-            }
-
-            await _context.SaveChangesAsync();
+           await _enrollmentService.AddRating(courseId,user.Id, rating);
 
             TempData["Message"] = "Your rating has been submitted successfully!";
             return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });
@@ -211,12 +183,11 @@ namespace LearnHub.Controllers
         [HttpPost]
         public async Task<IActionResult> RemoveRating(int courseId)
         {
-            var user = await _userManager.GetUserAsync(User);
+            var user = await _usermanager.GetUserAsync(User);
             if (user == null)
                 return Unauthorized();
 
-            var enrollment = await _context.Enrollments
-                .FirstOrDefaultAsync(e => e.CourseId == courseId && e.ApplicationUserId == user.Id);
+            var enrollment = await _enrollmentService.CheckExistingEnrollment(courseId, user.Id);
 
             if (enrollment == null || !enrollment.Rating.HasValue)
             {
@@ -224,16 +195,12 @@ namespace LearnHub.Controllers
                 return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });
             }
 
-            var course = await _context.Courses.FindAsync(courseId);
+            var course = await _enrollmentService.FindCourse(courseId);
             if (course == null)
                 return NotFound();
 
           
-            course.TotalRating -= enrollment.Rating.Value;
-            course.TotalVotes--;
-            enrollment.Rating = null;
-
-            await _context.SaveChangesAsync();
+           await _enrollmentService.RemoveRating(courseId,user.Id);
 
             TempData["Message"] = "Your rating has been removed!";
             return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });

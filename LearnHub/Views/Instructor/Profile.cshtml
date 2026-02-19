@@ -4,7 +4,7 @@
 
 @inject UserManager<ApplicationUser> UserManager
 
-@inject LearnHub.Data.ApplicationDbContext DbContext
+@inject LearnHub.Infrastructure.Persistence.ApplicationDbContext DbContext
 
 
 
@@ -138,11 +138,9 @@
 
                 }
 
+ 
 
-
-                // فلترة: لو مش المالك، اعرض Approved فقط
-
-                if (!isOwner && course.Status != LearnHub.Models.CourseStatus.Approved)
+                if (!isOwner && course.Status != LearnHub.Domain.Entities.CourseStatus.Approved)
 
                 {
 
@@ -178,25 +176,25 @@
 
                             {
 
-                                case LearnHub.Models.CourseStatus.Draft:
+                                case LearnHub.Domain.Entities.CourseStatus.Draft:
 
                                     <span class="badge bg-secondary">Draft</span>
 
                                     break;
 
-                                case LearnHub.Models.CourseStatus.Pending:
+                                case LearnHub.Domain.Entities.CourseStatus.Pending:
 
                                     <span class="badge bg-warning text-dark">Pending Review</span>
 
                                     break;
 
-                                case LearnHub.Models.CourseStatus.Approved:
+                                case LearnHub.Domain.Entities.CourseStatus.Approved:
 
                                     <span class="badge bg-success">Approved</span>
 
                                     break;
 
-                                case LearnHub.Models.CourseStatus.Rejected:
+                                case LearnHub.Domain.Entities.CourseStatus.Rejected:
 
                                     <span class="badge bg-danger">Rejected</span>
 
@@ -302,7 +300,7 @@
 
 
 
-                    @if (isOwner && (course.Status == LearnHub.Models.CourseStatus.Draft || course.Status == LearnHub.Models.CourseStatus.Rejected))
+                    @if (isOwner && (course.Status == LearnHub.Domain.Entities.CourseStatus.Draft || course.Status == LearnHub.Domain.Entities.CourseStatus.Rejected))
 
                     {
 

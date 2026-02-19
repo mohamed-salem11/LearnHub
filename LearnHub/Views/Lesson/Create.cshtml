@@ -1,4 +1,4 @@
-﻿@model LearnHub.Models.Lesson
+﻿@model LearnHub.Domain.Entities.Lesson
 @{
     ViewData["Title"] = "Create Lesson";
 }
@@ -42,7 +42,7 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-upload"></i> Upload & Create
                     </button>
-                    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                    <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>

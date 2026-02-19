@@ -1,17 +1,22 @@
-using LearnHub.Data;
-using LearnHub.Models;
+
+using LearnHub.Application.Services;
+using LearnHub.Domain.Entities;
+using LearnHub.Domain.Interfaces;
+using LearnHub.Infrastructure.Persistence;
+using LearnHub.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace LearnHub
 {
+     
     public class Program
     {
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+         
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString));
@@ -22,12 +27,32 @@ namespace LearnHub
         .AddDefaultUI()
         .AddDefaultTokenProviders();
 
+            builder.Services.AddScoped<IEnrollmentRepository, EfEnrollmentRepository>();
+            builder.Services.AddScoped<EnrollmentService>();
+
+            builder.Services.AddScoped<ICategoryRepository, EfCategoryRepository>();
+            builder.Services.AddScoped<CategoryService>();
+
+            builder.Services.AddScoped<ICourseRepository, EfCourseRepository>();
+            builder.Services.AddScoped<CourseService>();
+
+            builder.Services.AddScoped<ILessonRepository, EfLessonRepository>();
+            builder.Services.AddScoped<LessonService>();
+
+            builder.Services.AddScoped<IAdminRepository, EfAdminRepository>();
+            builder.Services.AddScoped<AdminService>();
+
+            builder.Services.AddScoped<IInstructorRepository, EfInstructorRepository>();
+            builder.Services.AddScoped<InstructorService>();
+
+            builder.Services.AddScoped<IInstructorRequestRepository, EfInstructorRequestRepository>();
+            builder.Services.AddScoped<InstructorRequestService>();
+
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
        
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseMigrationsEndPoint();

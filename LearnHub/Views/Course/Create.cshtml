@@ -1,4 +1,4 @@
-﻿@model LearnHub.Models.Course
+﻿@model LearnHub.Domain.Entities.Course
 @{
     ViewData["Title"] = "Create";
 }
@@ -44,7 +44,7 @@
 
             <div class="form-group mt-3">
                 <input type="submit" value="Create" class="btn btn-primary " />
-                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>
