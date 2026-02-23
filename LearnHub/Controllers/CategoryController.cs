@@ -1,66 +1,61 @@
-using LearnHub.Application.Services;
 using LearnHub.Domain.Entities;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LearnHub.Application.Services.Commands.Categories;
+using LearnHub.Application.Services.Queries.Categories;
 
 namespace LearnHub.Controllers
 {
     public class CategoryController : Controller
-    {
-        private readonly CategoryService _categoryService;
+    { 
+        private readonly IMediator _mediator;
 
-        public CategoryController(CategoryService categoryService)
+        public CategoryController(IMediator mediator)
         {
-            _categoryService = categoryService;
+            _mediator = mediator;
         }
 
         public async Task<IActionResult> Index()
         {
-            var categories = await _categoryService.GetCategories();  
+            var categories = await _mediator.Send(new GetCategoriesQuery());
             return View(categories);
         }
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public IActionResult Add() => View();
+        public IActionResult Add()
+        {
+            return View();  
+        }
 
         [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Add(Category category, IFormFile imageFile)
         {
-            var result = await _categoryService.Add(category, imageFile);
+            var result = await _mediator.Send(new CreateCategoryCommand(category, imageFile));
             if (!result.Success)
             {
                 ModelState.AddModelError("imageFile", result.Error!);
-                return View(category);
+                return View(category);  
             }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index));  
         }
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> Update(int id)
         {
-            var category = await _categoryService.Find(id);  
+            var category = await _mediator.Send(new GetCategoryByIdQuery(id));
             if (category == null) return NotFound();
-            return View(category);
+            return View(category); 
         }
 
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<IActionResult> Update(Category category, IFormFile imageFile)
+        public async Task<IActionResult> Update(Category category, IFormFile? imageFile)
         {
-            var existingCategory = await _categoryService.Find(category.Id);
-            if (existingCategory == null) return NotFound();
-
-            existingCategory.Name = category.Name;
- 
-            if (imageFile != null && imageFile.Length > 0)
-           {  
-                existingCategory.CoverImageUrl = "/uploads/new-file-name.jpg";  
-            }
-
-            await _categoryService.Update(existingCategory);  
+            await _mediator.Send(new UpdateCategoryCommand(category, imageFile));
             return RedirectToAction(nameof(Index));
         }
 
@@ -68,17 +63,16 @@ namespace LearnHub.Controllers
         [HttpGet]
         public async Task<IActionResult> Delete(int id)
         {
-            var category = await _categoryService.Find(id);
-            if (category == null)
-                return NotFound();
-            return View(category);
+            var category = await _mediator.Send(new GetCategoryByIdQuery(id));
+            if (category == null) return NotFound();
+            return View(category); 
         }
 
         [Authorize(Roles = "Admin")]
         [HttpPost, ActionName("Delete")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _categoryService.Delete(id); 
+            await _mediator.Send(new DeleteCategoryCommand(id));
             return RedirectToAction(nameof(Index));
         }
     }

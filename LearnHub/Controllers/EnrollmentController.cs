@@ -1,13 +1,12 @@
-﻿ 
-using LearnHub.Application.Services;
-using LearnHub.Domain.Entities;
-using LearnHub.Infrastructure.Persistence;
+﻿using LearnHub.Domain.Entities;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Stripe;
 using Stripe.Checkout;
+using LearnHub.Application.Services.Commands.Enrollments;
+using LearnHub.Application.Services.Queries.Enrollments;
 
 namespace LearnHub.Controllers
 {
@@ -16,58 +15,43 @@ namespace LearnHub.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _usermanager;
-        private readonly EnrollmentService _enrollmentService;
+        private readonly IMediator _mediator;
 
-        public EnrollmentController(EnrollmentService enrollmentService, UserManager<ApplicationUser> usermanager,
-            IConfiguration configuration)
+        public EnrollmentController(IMediator mediator, UserManager<ApplicationUser> usermanager, IConfiguration configuration)
         {
-            _enrollmentService = enrollmentService;
+            _mediator = mediator;
             _usermanager = usermanager;
             _configuration = configuration;
-
             StripeConfiguration.ApiKey = _configuration["Stripe:SecretKey"];
         }
- 
 
-    
         [HttpGet]
         public async Task<IActionResult> MyCourses()
         {
             var user = await _usermanager.GetUserAsync(User);
-            if (user == null)
-                return Unauthorized();
+            if (user == null) return Unauthorized();
 
-            var enrollments = await _enrollmentService.GetBookedCourses(user.Id); 
-
+            var enrollments = await _mediator.Send(new GetBookedCoursesQuery(user.Id));
             return View(enrollments);
         }
 
-     
         [HttpPost]
         public async Task<IActionResult> BuyCourse(int courseId)
         {
             var user = await _usermanager.GetUserAsync(User);
-            if (user == null)
-                return Unauthorized();
+            if (user == null) return Unauthorized();
 
-            var course = await _enrollmentService.FindCourse(courseId);
-              
-            if (course == null)
-                return NotFound();
+            var course = await _mediator.Send(new FindCourseQuery(courseId));
+            if (course == null) return NotFound();
 
-     
-            var existingEnrollment = await _enrollmentService.CheckExistingEnrollment(courseId,user.Id);
-
+            var existingEnrollment = await _mediator.Send(new CheckExistingEnrollmentQuery(courseId, user.Id));
             if (existingEnrollment != null)
             {
                 TempData["Error"] = "You are already enrolled in this course!";
                 return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });
             }
 
-      
             var domain = $"{Request.Scheme}://{Request.Host}";
-
-            
             var imageUrl = course.CoverImageUrl;
             if (!string.IsNullOrEmpty(imageUrl) && !imageUrl.StartsWith("http"))
             {
@@ -87,11 +71,9 @@ namespace LearnHub.Controllers
                             ProductData = new SessionLineItemPriceDataProductDataOptions
                             {
                                 Name = course.Title,
-                                Description = course.Description.Length > 500
-                                    ? course.Description.Substring(0, 500)
-                                    : course.Description,
+                                Description = course.Description.Length > 500 ? course.Description.Substring(0, 500) : course.Description,
                             },
-                            UnitAmount = course.Price * 100,  
+                            UnitAmount = course.Price * 100,
                         },
                         Quantity = 1,
                     },
@@ -108,59 +90,40 @@ namespace LearnHub.Controllers
 
             var service = new SessionService();
             Session session = service.Create(options);
-
             return Redirect(session.Url);
         }
 
-       
         [HttpGet]
         public async Task<IActionResult> PaymentSuccess(int courseId)
         {
             var user = await _usermanager.GetUserAsync(User);
-            if (user == null)
-                return Unauthorized();
+            if (user == null) return Unauthorized();
 
-            var course = await _enrollmentService.FindCourse(courseId);
-            if (course == null)
-                return NotFound();
+            var course = await _mediator.Send(new FindCourseQuery(courseId));
+            if (course == null) return NotFound();
 
-            
-            var existingEnrollment =   await _enrollmentService.CheckExistingEnrollment(courseId, user.Id); 
-
+            var existingEnrollment = await _mediator.Send(new CheckExistingEnrollmentQuery(courseId, user.Id));
             if (existingEnrollment == null)
             {
-                
-                var enrollment = new Enrollment
-                {
-                    CourseId = courseId,
-                    ApplicationUserId = user.Id,
-                    EnrolledAt = DateTime.Now
-                };
-
-               await _enrollmentService.BuyCourse(courseId,user.Id); 
+                await _mediator.Send(new BuyCourseCommand(courseId, user.Id));
             }
 
             TempData["Message"] = "Course purchased successfully! You can now start learning.";
             return RedirectToAction("MyCourses", "Enrollment", new { id = courseId });
         }
 
-        
         [HttpPost]
         public async Task<IActionResult> AddRating(int courseId, int rating)
         {
             var user = await _usermanager.GetUserAsync(User);
-            if (user == null)
-                return Unauthorized();
+            if (user == null) return Unauthorized();
 
-           
-            var enrollment = await _enrollmentService.CheckExistingEnrollment(courseId, user.Id);
-
+            var enrollment = await _mediator.Send(new CheckExistingEnrollmentQuery(courseId, user.Id));
             if (enrollment == null)
             {
                 TempData["Error"] = "You must purchase the course before rating it!";
                 return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });
             }
-
 
             if (rating < 1 || rating > 5)
             {
@@ -168,60 +131,33 @@ namespace LearnHub.Controllers
                 return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });
             }
 
-            var course = await _enrollmentService.FindCourse(courseId);
-            if (course == null)
-                return NotFound();
+            var course = await _mediator.Send(new FindCourseQuery(courseId));
+            if (course == null) return NotFound();
 
-          
-           await _enrollmentService.AddRating(courseId,user.Id, rating);
-
+            await _mediator.Send(new AddRatingCommand(courseId, user.Id, rating));
             TempData["Message"] = "Your rating has been submitted successfully!";
             return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });
         }
 
-        
         [HttpPost]
         public async Task<IActionResult> RemoveRating(int courseId)
         {
             var user = await _usermanager.GetUserAsync(User);
-            if (user == null)
-                return Unauthorized();
+            if (user == null) return Unauthorized();
 
-            var enrollment = await _enrollmentService.CheckExistingEnrollment(courseId, user.Id);
-
+            var enrollment = await _mediator.Send(new CheckExistingEnrollmentQuery(courseId, user.Id));
             if (enrollment == null || !enrollment.Rating.HasValue)
             {
                 TempData["Error"] = "No rating found to remove!";
                 return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });
             }
 
-            var course = await _enrollmentService.FindCourse(courseId);
-            if (course == null)
-                return NotFound();
+            var course = await _mediator.Send(new FindCourseQuery(courseId));
+            if (course == null) return NotFound();
 
-          
-           await _enrollmentService.RemoveRating(courseId,user.Id);
-
+            await _mediator.Send(new RemoveRatingCommand(courseId, user.Id));
             TempData["Message"] = "Your rating has been removed!";
             return RedirectToAction("LessonsByCourse", "Lesson", new { id = courseId });
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

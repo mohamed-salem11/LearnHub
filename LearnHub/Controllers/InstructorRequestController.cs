@@ -1,23 +1,20 @@
-﻿
-using LearnHub.Application.Services;
-using LearnHub.Domain.Entities;
-using LearnHub.Infrastructure.Persistence;
-using LearnHub.Infrastructure.Repositories;
+﻿using LearnHub.Domain.Entities;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using LearnHub.Application.Services.Commands.InstructorRequest;
 
 namespace LearnHub.Controllers
 {
     public class InstructorRequestController : Controller
     {
-        private readonly InstructorRequestService _InstructorRequestService;
+        private readonly IMediator _mediator;
         private readonly UserManager<ApplicationUser> _usermanager;
-       
-        public InstructorRequestController(InstructorRequestService instructorrequestservice, UserManager<ApplicationUser> usermanager)
+
+        public InstructorRequestController(IMediator mediator, UserManager<ApplicationUser> usermanager)
         {
-            _InstructorRequestService = instructorrequestservice;
+            _mediator = mediator;
             _usermanager = usermanager;
         }
 
@@ -27,7 +24,6 @@ namespace LearnHub.Controllers
         {
             return View();
         }
-
 
         [HttpGet]
         [Authorize]
@@ -41,14 +37,13 @@ namespace LearnHub.Controllers
         public async Task<IActionResult> SubmitRequest(ApplicationUser model, IFormFile PhotoFile)
         {
             var user = await _usermanager.GetUserAsync(User);
-            if (user == null)
-                return Unauthorized();
+            if (user == null) return Unauthorized();
 
             user.Bio = model.Bio;
             user.Specialization = model.Specialization;
             user.IsInstructorRequestPending = true;
 
-            var result = await _InstructorRequestService.SubmitRequestAsync(user, PhotoFile);
+            var result = await _mediator.Send(new SubmitInstructorRequestCommand(user, PhotoFile));
 
             if (!result.Success)
             {
@@ -59,19 +54,5 @@ namespace LearnHub.Controllers
             TempData["Message"] = "Your instructor request has been submitted and is pending admin approval.";
             return RedirectToAction("Index", "Category");
         }
-
-
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

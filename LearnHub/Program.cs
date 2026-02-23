@@ -1,9 +1,11 @@
-
+using LearnHub.Application;
 using LearnHub.Application.Services;
+using LearnHub.Application.Services.Commands.Categories;
 using LearnHub.Domain.Entities;
 using LearnHub.Domain.Interfaces;
 using LearnHub.Infrastructure.Persistence;
 using LearnHub.Infrastructure.Repositories;
+using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,28 +29,31 @@ namespace LearnHub
         .AddDefaultUI()
         .AddDefaultTokenProviders();
 
+            builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateCategoryCommand).Assembly));
+
             builder.Services.AddScoped<IEnrollmentRepository, EfEnrollmentRepository>();
-            builder.Services.AddScoped<EnrollmentService>();
+             
 
             builder.Services.AddScoped<ICategoryRepository, EfCategoryRepository>();
-            builder.Services.AddScoped<CategoryService>();
+           
 
             builder.Services.AddScoped<ICourseRepository, EfCourseRepository>();
-            builder.Services.AddScoped<CourseService>();
+           
 
             builder.Services.AddScoped<ILessonRepository, EfLessonRepository>();
-            builder.Services.AddScoped<LessonService>();
+      
 
             builder.Services.AddScoped<IAdminRepository, EfAdminRepository>();
-            builder.Services.AddScoped<AdminService>();
-
+          
             builder.Services.AddScoped<IInstructorRepository, EfInstructorRepository>();
-            builder.Services.AddScoped<InstructorService>();
+          
 
             builder.Services.AddScoped<IInstructorRequestRepository, EfInstructorRequestRepository>();
-            builder.Services.AddScoped<InstructorRequestService>();
+         
 
             builder.Services.AddControllersWithViews();
+
+            builder.Services.AddHttpClient();
 
             var app = builder.Build();
        
@@ -72,7 +77,7 @@ namespace LearnHub
                 .WithStaticAssets();
             app.MapRazorPages()
                .WithStaticAssets();
-
+            Console.WriteLine(builder.Configuration["Stripe:SecretKey"]);
             app.Run();
         }
     }
